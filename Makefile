@@ -11,13 +11,10 @@ migrate:
 	migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) up
 
 migrate-down:
-	migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down
+	migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) down 1
 
 migrate-reset:
 	migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) reset
-
-migrate-status:
-	migrate -path $(MIGRATIONS_DIR) -database $(DB_URL) status
 
 migrate-create:
 	migrate create -ext sql -dir $(MIGRATIONS_DIR) $(name)
