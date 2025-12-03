@@ -7,7 +7,8 @@ import (
 )
 
 type Config struct {
-	Port string
+	Port  string
+	DBDsn string
 }
 
 func getEnv(key string, def string) string {
@@ -19,7 +20,8 @@ func getEnv(key string, def string) string {
 
 func Load() Config {
 	cfg := Config{
-		Port: getEnv("SERVER_PORT", "8080"),
+		Port:  getEnv("SERVER_PORT", "8080"),
+		DBDsn: getEnv("DB_DSN", "root:root@tcp(localhost:3306)/materials?parseTime=true"),
 	}
 
 	if cfg.Port == "" {
