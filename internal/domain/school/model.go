@@ -24,7 +24,7 @@ type Material struct {
 	ID                 MaterialID
 	TeacherID          TeacherID
 	SubjectID          *SubjectID
-	OriginalMaterialID *MaterialID
+	OriginalMaterialID MaterialID
 	CurrentVersionID   *MaterialVersionID
 	CreatedAt          *time.Time
 }
