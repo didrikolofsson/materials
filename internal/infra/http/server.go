@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/didrikolofsson/materials/internal/domain/school"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -19,7 +20,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func New(port string) *Server {
+func New(port string, h *school.SubjectsHandler) *Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -33,6 +34,8 @@ func New(port string) *Server {
 		resp.Header().Set("Content-Type", "application/json")
 		_, _ = resp.Write([]byte(`{"status": "ok"}`))
 	})
+
+	h.RegisterRoutes(r)
 
 	addr := fmt.Sprintf(":%s", port)
 	srv := &http.Server{

@@ -22,23 +22,21 @@ type Subject struct {
 
 type Material struct {
 	ID                 MaterialID
-	Title              string
-	Description        string
-	OwnerTeacherID     TeacherID
-	SubjectID          SubjectID
-	CurrentVersionID   MaterialVersionID
-	OriginalMaterialID MaterialID
-	CreatedAt          time.Time
+	TeacherID          TeacherID
+	SubjectID          *SubjectID
+	OriginalMaterialID *MaterialID
+	CurrentVersionID   *MaterialVersionID
+	CreatedAt          *time.Time
 }
 
 type MaterialVersion struct {
-	ID              MaterialVersionID
-	MaterialID      MaterialID
-	TeacherID       TeacherID
-	ParentVersionID MaterialVersionID
-	VersionNumber   int
-	Summary         string
-	Content         string
-	IsMain          bool
-	CreatedAt       time.Time
+	ID            MaterialVersionID
+	MaterialID    MaterialID
+	Title         string
+	Summary       *string
+	Description   *string
+	VersionNumber int
+	Content       string
+	IsMain        bool
+	CreatedAt     time.Time
 }
