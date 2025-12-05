@@ -3,6 +3,7 @@ package http
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,7 +21,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func New(port string, h *school.SubjectsHandler) *Server {
+func New(port string, db *sql.DB) *Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -29,13 +30,8 @@ func New(port string, h *school.SubjectsHandler) *Server {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// Simple health endpoint
-	r.Get("/health", func(resp http.ResponseWriter, req *http.Request) {
-		resp.Header().Set("Content-Type", "application/json")
-		_, _ = resp.Write([]byte(`{"status": "ok"}`))
-	})
-
-	h.RegisterRoutes(r)
+	// Routes
+	school.RegisterRoutes(r, db)
 
 	addr := fmt.Sprintf(":%s", port)
 	srv := &http.Server{

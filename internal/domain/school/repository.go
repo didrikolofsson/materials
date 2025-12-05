@@ -1,4 +1,3 @@
-// Package school provides repository interfaces for the school domain.
 package school
 
 import (
@@ -6,8 +5,14 @@ import (
 	"database/sql"
 )
 
+// TxOrDB interface allows methods to work with either *sql.DB or *sql.Tx
+type TxOrDB interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
 type SubjectsRepository interface {
-	List(ctx context.Context) ([]Subject, error)
+	// List accepts optional transaction - pass nil for direct DB query
+	List(ctx context.Context, tx *sql.Tx) ([]Subject, error)
 }
 
 type MySQLSubjectsRepository struct {
@@ -18,12 +23,19 @@ func NewMySQLSubjectsRepository(db *sql.DB) *MySQLSubjectsRepository {
 	return &MySQLSubjectsRepository{db: db}
 }
 
-func (r *MySQLSubjectsRepository) List(ctx context.Context) ([]Subject, error) {
+func (r *MySQLSubjectsRepository) List(ctx context.Context, tx *sql.Tx) ([]Subject, error) {
 	const query = `
 		SELECT id, name, created_at
 		FROM subjects
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+
+	// Use transaction if provided, otherwise use repository's db connection
+	var db TxOrDB = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}

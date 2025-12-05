@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/didrikolofsson/materials/internal/config"
-	"github.com/didrikolofsson/materials/internal/domain/school"
 	infrahttp "github.com/didrikolofsson/materials/internal/infra/http"
 	infradb "github.com/didrikolofsson/materials/internal/infra/mysql"
 )
@@ -18,10 +17,7 @@ func main() {
 	}
 	defer db.Close()
 
-	subjectsRepo := school.NewMySQLSubjectsRepository(db)
-	subjectsHandler := school.NewSubjectsHandler(subjectsRepo)
-
-	srv := infrahttp.New(cfg.Port, subjectsHandler)
+	srv := infrahttp.New(cfg.Port, db)
 
 	if err := srv.Run(); err != nil {
 		log.Fatalf("server shutdown error: %v", err)

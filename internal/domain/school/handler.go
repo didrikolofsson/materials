@@ -3,30 +3,27 @@ package school
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
 )
 
-type SubjectsHandler struct {
-	r SubjectsRepository
+type SchoolHandler struct {
+	subjectService *SubjectService
 }
 
-func NewSubjectsHandler(r SubjectsRepository) *SubjectsHandler {
-	return &SubjectsHandler{r: r}
+func NewSchoolHandler(subjectService *SubjectService) *SchoolHandler {
+	return &SchoolHandler{subjectService: subjectService}
 }
 
-func (h *SubjectsHandler) RegisterRoutes(r chi.Router) {
-	r.Get("/subjects", h.handleListSubjects)
-}
-
-func (h *SubjectsHandler) handleListSubjects(w http.ResponseWriter, r *http.Request) {
+func (h *SchoolHandler) handleListSubjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	subjects, err := h.r.List(ctx)
+	subjects, err := h.subjectService.ListSubjects(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(subjects)
+	if err := json.NewEncoder(w).Encode(subjects); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
