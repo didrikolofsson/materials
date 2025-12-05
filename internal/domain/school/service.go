@@ -5,17 +5,20 @@ import (
 	"context"
 
 	"github.com/didrikolofsson/materials/internal/models"
-	"github.com/didrikolofsson/materials/internal/repositories"
 )
 
-type SubjectService struct {
-	r repositories.SubjectsRepository
+type ServiceDomainSchool struct {
+	r RepositoryDomainSchool
 }
 
-func NewSubjectService(r repositories.SubjectsRepository) *SubjectService {
-	return &SubjectService{r: r}
+func NewServiceDomainSchool(r RepositoryDomainSchool) *ServiceDomainSchool {
+	return &ServiceDomainSchool{r: r}
 }
 
-func (s *SubjectService) ListSubjects(ctx context.Context) ([]models.Subject, error) {
-	return s.r.List(ctx)
+func (s *ServiceDomainSchool) ListSubjects(ctx context.Context) ([]models.Subject, error) {
+	return s.r.Subjects.List(ctx)
+}
+
+func (s *ServiceDomainSchool) ListTeachers(ctx context.Context) ([]models.Teacher, error) {
+	return s.r.Teachers.List(ctx)
 }

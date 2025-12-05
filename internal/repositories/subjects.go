@@ -8,8 +8,10 @@ import (
 )
 
 // SubjectsRepository defines the interface for subject data access
+// Simple operations handle transactions internally if needed
+// Composite operations will handle multi-step transactions internally
 type SubjectsRepository interface {
-	// List accepts optional transaction - pass nil for direct DB query
+	// List returns all subjects
 	List(ctx context.Context) ([]models.Subject, error)
 }
 

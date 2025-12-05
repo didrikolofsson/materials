@@ -5,17 +5,17 @@ import (
 	"net/http"
 )
 
-type SchoolHandler struct {
-	subjectService *SubjectService
+type HandlerDomainSchool struct {
+	s *ServiceDomainSchool
 }
 
-func NewSchoolHandler(subjectService *SubjectService) *SchoolHandler {
-	return &SchoolHandler{subjectService: subjectService}
+func NewHandlerDomainSchool(service *ServiceDomainSchool) *HandlerDomainSchool {
+	return &HandlerDomainSchool{s: service}
 }
 
-func (h *SchoolHandler) handleListSubjects(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerDomainSchool) handleListSubjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	subjects, err := h.subjectService.ListSubjects(ctx)
+	subjects, err := h.s.ListSubjects(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -23,6 +23,21 @@ func (h *SchoolHandler) handleListSubjects(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(subjects); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HandlerDomainSchool) handleListTeachers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	teachers, err := h.s.ListTeachers(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(teachers); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
