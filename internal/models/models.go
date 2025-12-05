@@ -9,35 +9,34 @@ type MaterialID string
 type MaterialVersionID string
 
 type Teacher struct {
-	ID        TeacherID
-	Name      string
-	CreatedAt time.Time
+	ID        TeacherID `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Subject struct {
-	ID        SubjectID
-	Name      string
-	CreatedAt time.Time
+	ID        SubjectID `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Material struct {
-	ID                 MaterialID
-	TeacherID          TeacherID
-	SubjectID          *SubjectID
-	OriginalMaterialID MaterialID
-	CurrentVersionID   *MaterialVersionID
-	CreatedAt          *time.Time
+	ID                 MaterialID         `json:"id"`
+	TeacherID          TeacherID          `json:"teacher_id"`
+	SubjectID          *SubjectID         `json:"subject_id"`
+	OriginalMaterialID MaterialID         `json:"original_material_id"`
+	CurrentVersionID   *MaterialVersionID `json:"current_version_id"`
+	CreatedAt          *time.Time         `json:"created_at"`
 }
 
 type MaterialVersion struct {
-	ID            MaterialVersionID
-	MaterialID    MaterialID
-	Title         string
-	Summary       *string
-	Description   *string
-	VersionNumber int
-	Content       string
-	IsMain        bool
-	CreatedAt     time.Time
+	ID            MaterialVersionID `json:"id"`
+	MaterialID    MaterialID        `json:"material_id"`
+	Title         string            `json:"title"`
+	Summary       *string           `json:"summary"`
+	Description   *string           `json:"description"`
+	VersionNumber int               `json:"version_number"`
+	Content       string            `json:"content"`
+	IsMain        bool              `json:"is_main"`
+	CreatedAt     time.Time         `json:"created_at"`
 }
-

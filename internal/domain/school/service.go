@@ -22,3 +22,15 @@ func (s *ServiceDomainSchool) ListSubjects(ctx context.Context) ([]models.Subjec
 func (s *ServiceDomainSchool) ListTeachers(ctx context.Context) ([]models.Teacher, error) {
 	return s.r.Teachers.List(ctx)
 }
+
+func (s *ServiceDomainSchool) CreateMaterial(ctx context.Context, m *models.Material) error {
+	return s.r.Materials.Create(ctx, m)
+}
+
+func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v string) error {
+	return s.r.Materials.UpdateCurrentVersion(ctx, m, v)
+}
+
+func (s *ServiceDomainSchool) GetMaterialByID(ctx context.Context, id string) (*models.Material, error) {
+	return s.r.Materials.GetByID(ctx, id)
+}

@@ -14,4 +14,7 @@ func RegisterRoutes(r chi.Router, db *sql.DB) {
 
 	r.Get("/subjects", handler.handleListSubjects)
 	r.Get("/teachers", handler.handleListTeachers)
+
+	r.Get("/materials/{id}", handler.handleGetMaterialByID)
+
 }

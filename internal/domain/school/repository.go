@@ -7,13 +7,15 @@ import (
 )
 
 type RepositoryDomainSchool struct {
-	Subjects repositories.SubjectsRepository
-	Teachers repositories.TeachersRepository
+	Subjects  repositories.SubjectsRepository
+	Teachers  repositories.TeachersRepository
+	Materials repositories.MaterialsRepository
 }
 
 func NewRepositoryDomainSchool(db *sql.DB) RepositoryDomainSchool {
 	return RepositoryDomainSchool{
-		Subjects: repositories.NewMySQLSubjectsRepository(db),
-		Teachers: repositories.NewMySQLTeachersRepository(db),
+		Subjects:  repositories.NewMySQLSubjectsRepository(db),
+		Teachers:  repositories.NewMySQLTeachersRepository(db),
+		Materials: repositories.NewMySQLMaterialsRepository(db),
 	}
 }
