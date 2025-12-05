@@ -24,13 +24,16 @@ func (s *ServiceDomainSchool) ListTeachers(ctx context.Context) ([]models.Teache
 }
 
 func (s *ServiceDomainSchool) CreateMaterial(ctx context.Context, m *models.Material) error {
-	return s.r.Materials.Create(ctx, m)
+	_, err := s.r.Materials.Create(ctx, m)
+	return err
 }
 
-func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v string) error {
-	return s.r.Materials.UpdateCurrentVersion(ctx, m, v)
+func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v int64) error {
+	err := s.r.Materials.UpdateCurrentVersion(ctx, m, v)
+	return err
 }
 
-func (s *ServiceDomainSchool) GetMaterialByID(ctx context.Context, id string) (*models.Material, error) {
-	return s.r.Materials.GetByID(ctx, id)
+func (s *ServiceDomainSchool) GetMaterialByID(ctx context.Context, id int64) (*models.Material, error) {
+	m, err := s.r.Materials.GetByID(ctx, id)
+	return m, err
 }

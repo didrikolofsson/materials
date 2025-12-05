@@ -9,9 +9,9 @@ import (
 )
 
 type MaterialsRepository interface {
-	Create(ctx context.Context, m *models.Material) error
-	UpdateCurrentVersion(ctx context.Context, m, v string) error
-	GetByID(ctx context.Context, id string) (*models.Material, error)
+	Create(ctx context.Context, m *models.Material) (models.MaterialID, error)
+	UpdateCurrentVersion(ctx context.Context, m, v int64) error
+	GetByID(ctx context.Context, id int64) (*models.Material, error)
 }
 
 type MySQLMaterialsRepository struct {
@@ -22,20 +22,24 @@ func NewMySQLMaterialsRepository(db *sql.DB) *MySQLMaterialsRepository {
 	return &MySQLMaterialsRepository{db: db}
 }
 
-func (r *MySQLMaterialsRepository) Create(ctx context.Context, m *models.Material) error {
+func (r *MySQLMaterialsRepository) Create(ctx context.Context, m *models.Material) (models.MaterialID, error) {
 	query := `
 		INSERT INTO materials (id, teacher_id, subject_id, original_material_id)
 		VALUES (?, ?, ?, ?);
 	`
 
-	_, err := r.db.ExecContext(ctx, query, m.ID, m.TeacherID, m.SubjectID, m.OriginalMaterialID)
+	result, err := r.db.ExecContext(ctx, query, m.ID, m.TeacherID, m.SubjectID, m.OriginalMaterialID)
 	if err != nil {
-		return fmt.Errorf("failed to create material: %w", err)
+		return 0, fmt.Errorf("failed to create material: %w", err)
 	}
-	return nil
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("failed to create material: %w", err)
+	}
+	return models.MaterialID(id), nil
 }
 
-func (r *MySQLMaterialsRepository) UpdateCurrentVersion(ctx context.Context, m, v string) error {
+func (r *MySQLMaterialsRepository) UpdateCurrentVersion(ctx context.Context, m, v int64) error {
 	query := `
 		UPDATE materials
 		SET current_version_id = ?
@@ -49,7 +53,7 @@ func (r *MySQLMaterialsRepository) UpdateCurrentVersion(ctx context.Context, m, 
 	return nil
 }
 
-func (r *MySQLMaterialsRepository) GetByID(ctx context.Context, id string) (*models.Material, error) {
+func (r *MySQLMaterialsRepository) GetByID(ctx context.Context, id int64) (*models.Material, error) {
 	query := `
 		SELECT id, teacher_id, subject_id, original_material_id, current_version_id, created_at
 		FROM materials

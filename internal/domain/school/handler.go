@@ -3,9 +3,9 @@ package school
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-playground/validator/v10"
 )
 
 type HandlerDomainSchool struct {
@@ -48,14 +48,14 @@ func (h *HandlerDomainSchool) handleListTeachers(w http.ResponseWriter, r *http.
 
 func (h *HandlerDomainSchool) handleGetMaterialByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	validator := validator.New()
 
 	id := chi.URLParam(r, "id")
-	if err := validator.Var(id, "required,uuid"); err != nil {
+	idInt, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	material, err := h.s.GetMaterialByID(ctx, string(id))
+	material, err := h.s.GetMaterialByID(ctx, idInt)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

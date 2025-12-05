@@ -3,10 +3,10 @@ package models
 
 import "time"
 
-type TeacherID string
-type SubjectID string
-type MaterialID string
-type MaterialVersionID string
+type TeacherID int64
+type SubjectID int64
+type MaterialID int64
+type MaterialVersionID int64
 
 type Teacher struct {
 	ID        TeacherID `json:"id"`
