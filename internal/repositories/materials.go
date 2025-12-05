@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/didrikolofsson/materials/internal/models"
@@ -10,16 +9,14 @@ import (
 
 type MaterialsRepository interface {
 	Create(ctx context.Context, tx TxOrDB, m *models.Material) (models.MaterialID, error)
-	UpdateCurrentVersion(ctx context.Context, m, v int64) error
-	GetByID(ctx context.Context, id int64) (*models.Material, error)
+	UpdateCurrentVersion(ctx context.Context, tx TxOrDB, m, v int64) error
+	GetByID(ctx context.Context, tx TxOrDB, id int64) (*models.Material, error)
 }
 
-type MySQLMaterialsRepository struct {
-	db *sql.DB
-}
+type MySQLMaterialsRepository struct{}
 
-func NewMySQLMaterialsRepository(db *sql.DB) *MySQLMaterialsRepository {
-	return &MySQLMaterialsRepository{db: db}
+func NewMySQLMaterialsRepository() *MySQLMaterialsRepository {
+	return &MySQLMaterialsRepository{}
 }
 
 func (r *MySQLMaterialsRepository) Create(ctx context.Context, tx TxOrDB, m *models.Material) (models.MaterialID, error) {
@@ -39,21 +36,21 @@ func (r *MySQLMaterialsRepository) Create(ctx context.Context, tx TxOrDB, m *mod
 	return models.MaterialID(id), nil
 }
 
-func (r *MySQLMaterialsRepository) UpdateCurrentVersion(ctx context.Context, m, v int64) error {
+func (r *MySQLMaterialsRepository) UpdateCurrentVersion(ctx context.Context, tx TxOrDB, m, v int64) error {
 	query := `
 		UPDATE materials
 		SET current_version_id = ?
 		WHERE id = ?;
 	`
 
-	_, err := r.db.ExecContext(ctx, query, v, m)
+	_, err := tx.ExecContext(ctx, query, v, m)
 	if err != nil {
 		return fmt.Errorf("failed to update current version: %w", err)
 	}
 	return nil
 }
 
-func (r *MySQLMaterialsRepository) GetByID(ctx context.Context, id int64) (*models.Material, error) {
+func (r *MySQLMaterialsRepository) GetByID(ctx context.Context, tx TxOrDB, id int64) (*models.Material, error) {
 	query := `
 		SELECT id, teacher_id, subject_id, original_material_id, current_version_id, created_at
 		FROM materials
@@ -61,7 +58,7 @@ func (r *MySQLMaterialsRepository) GetByID(ctx context.Context, id int64) (*mode
 	`
 
 	var m models.Material
-	if err := r.db.QueryRowContext(
+	if err := tx.QueryRowContext(
 		ctx, query, id,
 	).Scan(
 		&m.ID,

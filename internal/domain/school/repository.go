@@ -1,8 +1,6 @@
 package school
 
 import (
-	"database/sql"
-
 	"github.com/didrikolofsson/materials/internal/repositories"
 )
 
@@ -13,11 +11,11 @@ type RepositoryDomainSchool struct {
 	MaterialVersions repositories.MaterialVersionsRepository
 }
 
-func NewRepositoryDomainSchool(db *sql.DB) RepositoryDomainSchool {
+func NewRepositoryDomainSchool() RepositoryDomainSchool {
 	return RepositoryDomainSchool{
-		Subjects:         repositories.NewMySQLSubjectsRepository(db),
-		Teachers:         repositories.NewMySQLTeachersRepository(db),
-		Materials:        repositories.NewMySQLMaterialsRepository(db),
-		MaterialVersions: repositories.NewMySQLMaterialVersionsRepository(db),
+		Subjects:         repositories.NewMySQLSubjectsRepository(),
+		Teachers:         repositories.NewMySQLTeachersRepository(),
+		Materials:        repositories.NewMySQLMaterialsRepository(),
+		MaterialVersions: repositories.NewMySQLMaterialVersionsRepository(),
 	}
 }

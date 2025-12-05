@@ -8,8 +8,7 @@ import (
 )
 
 func RegisterRoutes(r chi.Router, db *sql.DB) {
-	repository := NewRepositoryDomainSchool(db)
-	service := NewServiceDomainSchool(repository, db)
+	service := NewServiceDomainSchool(db)
 	handler := NewHandlerDomainSchool(service)
 
 	r.Get("/subjects", handler.handleListSubjects)

@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/didrikolofsson/materials/internal/models"
 )
@@ -10,24 +9,22 @@ import (
 // SubjectsRepository defines the interface for subject data access
 type SubjectsRepository interface {
 	// List returns all subjects
-	List(ctx context.Context) ([]models.Subject, error)
+	List(ctx context.Context, tx TxOrDB) ([]models.Subject, error)
 }
 
-type MySQLSubjectsRepository struct {
-	db *sql.DB
+type MySQLSubjectsRepository struct{}
+
+func NewMySQLSubjectsRepository() *MySQLSubjectsRepository {
+	return &MySQLSubjectsRepository{}
 }
 
-func NewMySQLSubjectsRepository(db *sql.DB) *MySQLSubjectsRepository {
-	return &MySQLSubjectsRepository{db: db}
-}
-
-func (r *MySQLSubjectsRepository) List(ctx context.Context) ([]models.Subject, error) {
+func (r *MySQLSubjectsRepository) List(ctx context.Context, tx TxOrDB) ([]models.Subject, error) {
 	const query = `
 		SELECT id, name, created_at
 		FROM subjects
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}

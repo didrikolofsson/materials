@@ -14,16 +14,16 @@ type ServiceDomainSchool struct {
 	db *sql.DB
 }
 
-func NewServiceDomainSchool(r RepositoryDomainSchool, db *sql.DB) *ServiceDomainSchool {
-	return &ServiceDomainSchool{r: r, db: db}
+func NewServiceDomainSchool(db *sql.DB) *ServiceDomainSchool {
+	return &ServiceDomainSchool{r: NewRepositoryDomainSchool(), db: db}
 }
 
 func (s *ServiceDomainSchool) ListSubjects(ctx context.Context) ([]models.Subject, error) {
-	return s.r.Subjects.List(ctx)
+	return s.r.Subjects.List(ctx, s.db)
 }
 
 func (s *ServiceDomainSchool) ListTeachers(ctx context.Context) ([]models.Teacher, error) {
-	return s.r.Teachers.List(ctx)
+	return s.r.Teachers.List(ctx, s.db)
 }
 
 func (s *ServiceDomainSchool) CreateMaterialWithInitialVersion(
@@ -65,11 +65,11 @@ func (s *ServiceDomainSchool) CreateMaterialWithInitialVersion(
 }
 
 func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v int64) error {
-	err := s.r.Materials.UpdateCurrentVersion(ctx, m, v)
+	err := s.r.Materials.UpdateCurrentVersion(ctx, s.db, m, v)
 	return err
 }
 
 func (s *ServiceDomainSchool) GetMaterialByID(ctx context.Context, id int64) (*models.Material, error) {
-	m, err := s.r.Materials.GetByID(ctx, id)
+	m, err := s.r.Materials.GetByID(ctx, s.db, id)
 	return m, err
 }

@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/didrikolofsson/materials/internal/models"
@@ -11,24 +10,22 @@ import (
 // TeachersRepository defines the interface for teacher data access
 type TeachersRepository interface {
 	// List returns all teachers
-	List(ctx context.Context) ([]models.Teacher, error)
+	List(ctx context.Context, tx TxOrDB) ([]models.Teacher, error)
 }
 
-type MySQLTeachersRepository struct {
-	db *sql.DB
+type MySQLTeachersRepository struct{}
+
+func NewMySQLTeachersRepository() *MySQLTeachersRepository {
+	return &MySQLTeachersRepository{}
 }
 
-func NewMySQLTeachersRepository(db *sql.DB) *MySQLTeachersRepository {
-	return &MySQLTeachersRepository{db: db}
-}
-
-func (r *MySQLTeachersRepository) List(ctx context.Context) ([]models.Teacher, error) {
+func (r *MySQLTeachersRepository) List(ctx context.Context, tx TxOrDB) ([]models.Teacher, error) {
 	query := `
 		SELECT id, name, created_at
 		FROM teachers;
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}

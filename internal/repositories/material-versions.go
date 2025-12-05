@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/didrikolofsson/materials/internal/models"
@@ -14,12 +13,10 @@ type MaterialVersionsRepository interface {
 	// GetByID(ctx context.Context, materialID, versionID string) (*models.MaterialVersion, error)
 }
 
-type MySQLMaterialVersionsRepository struct {
-	db *sql.DB
-}
+type MySQLMaterialVersionsRepository struct{}
 
-func NewMySQLMaterialVersionsRepository(db *sql.DB) *MySQLMaterialVersionsRepository {
-	return &MySQLMaterialVersionsRepository{db: db}
+func NewMySQLMaterialVersionsRepository() *MySQLMaterialVersionsRepository {
+	return &MySQLMaterialVersionsRepository{}
 }
 
 func (r *MySQLMaterialVersionsRepository) Create(
