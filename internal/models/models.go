@@ -20,6 +20,28 @@ type Subject struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type CreateMaterialParams struct {
+	TeacherID TeacherID `json:"teacher_id" validate:"required,min=1"`
+	SubjectID SubjectID `json:"subject_id" validate:"required,min=1"`
+}
+
+type CreateMaterialBody struct {
+	Title       string  `json:"title" validate:"required,min=1,max=255"`
+	Summary     *string `json:"summary" validate:"omitempty,min=1,max=255"`
+	Description *string `json:"description" validate:"omitempty,min=1,max=1000"`
+	Content     string  `json:"content" validate:"required,min=1,max=10000"`
+}
+
+type CreateMaterialRequest struct {
+	Params CreateMaterialParams `json:"params" validate:"required"`
+	Body   CreateMaterialBody   `json:"body" validate:"required"`
+}
+
+type CreateMaterialResponse struct {
+	MaterialID        MaterialID        `json:"material_id"`
+	MaterialVersionID MaterialVersionID `json:"material_version_id"`
+}
+
 type Material struct {
 	ID                 MaterialID         `json:"id"`
 	TeacherID          TeacherID          `json:"teacher_id"`

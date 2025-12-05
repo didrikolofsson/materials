@@ -9,7 +9,7 @@ import (
 )
 
 type MaterialsRepository interface {
-	Create(ctx context.Context, m *models.Material) (models.MaterialID, error)
+	Create(ctx context.Context, tx TxOrDB, m *models.Material) (models.MaterialID, error)
 	UpdateCurrentVersion(ctx context.Context, m, v int64) error
 	GetByID(ctx context.Context, id int64) (*models.Material, error)
 }
@@ -22,13 +22,13 @@ func NewMySQLMaterialsRepository(db *sql.DB) *MySQLMaterialsRepository {
 	return &MySQLMaterialsRepository{db: db}
 }
 
-func (r *MySQLMaterialsRepository) Create(ctx context.Context, m *models.Material) (models.MaterialID, error) {
+func (r *MySQLMaterialsRepository) Create(ctx context.Context, tx TxOrDB, m *models.Material) (models.MaterialID, error) {
 	query := `
-		INSERT INTO materials (id, teacher_id, subject_id, original_material_id)
-		VALUES (?, ?, ?, ?);
+		INSERT INTO materials (teacher_id, subject_id)
+		VALUES (?, ?);
 	`
 
-	result, err := r.db.ExecContext(ctx, query, m.ID, m.TeacherID, m.SubjectID, m.OriginalMaterialID)
+	result, err := tx.ExecContext(ctx, query, m.TeacherID, m.SubjectID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create material: %w", err)
 	}

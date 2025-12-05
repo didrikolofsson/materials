@@ -3,16 +3,19 @@ package school
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
 	"github.com/didrikolofsson/materials/internal/models"
 )
 
 type ServiceDomainSchool struct {
-	r RepositoryDomainSchool
+	r  RepositoryDomainSchool
+	db *sql.DB
 }
 
-func NewServiceDomainSchool(r RepositoryDomainSchool) *ServiceDomainSchool {
-	return &ServiceDomainSchool{r: r}
+func NewServiceDomainSchool(r RepositoryDomainSchool, db *sql.DB) *ServiceDomainSchool {
+	return &ServiceDomainSchool{r: r, db: db}
 }
 
 func (s *ServiceDomainSchool) ListSubjects(ctx context.Context) ([]models.Subject, error) {
@@ -23,9 +26,42 @@ func (s *ServiceDomainSchool) ListTeachers(ctx context.Context) ([]models.Teache
 	return s.r.Teachers.List(ctx)
 }
 
-func (s *ServiceDomainSchool) CreateMaterial(ctx context.Context, m *models.Material) error {
-	_, err := s.r.Materials.Create(ctx, m)
-	return err
+func (s *ServiceDomainSchool) CreateMaterialWithInitialVersion(
+	ctx context.Context, m *models.CreateMaterialRequest,
+) (models.MaterialID, models.MaterialVersionID, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	materialID, err := s.r.Materials.Create(ctx, tx, &models.Material{
+		TeacherID: m.Params.TeacherID,
+		SubjectID: &m.Params.SubjectID,
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to create material: %w", err)
+	}
+
+	materialVersion := &models.MaterialVersion{
+		MaterialID:    materialID,
+		Title:         m.Body.Title,
+		Summary:       m.Body.Summary,
+		Description:   m.Body.Description,
+		Content:       m.Body.Content,
+		VersionNumber: 1,
+		IsMain:        true,
+	}
+
+	materialVersionID, err := s.r.MaterialVersions.Create(ctx, tx, materialVersion)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to create material version: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	return materialID, materialVersionID, nil
 }
 
 func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v int64) error {

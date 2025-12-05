@@ -8,20 +8,18 @@ import (
 	"math/rand/v2"
 
 	"github.com/didrikolofsson/materials/internal/models"
-	"github.com/google/uuid"
 )
 
 func seedTeachers(db *sql.DB) error {
 	log.Println("Seeding teachers...")
-	teachers := []string{
+	teacherNames := []string{
 		"John Doe",
 		"Jane Doe",
 		"John Smith",
 		"Jane Smith",
 	}
-	for _, teacher := range teachers {
-		id := uuid.NewString()
-		if _, err := db.Exec("INSERT INTO teachers (id, name) VALUES (?, ?)", id, teacher); err != nil {
+	for _, name := range teacherNames {
+		if _, err := db.Exec("INSERT INTO teachers (name) VALUES (?)", name); err != nil {
 			return fmt.Errorf("failed to insert teacher: %w", err)
 		}
 	}
@@ -30,7 +28,7 @@ func seedTeachers(db *sql.DB) error {
 
 func seedSubjects(db *sql.DB) error {
 	log.Println("Seeding subjects...")
-	subjects := []string{
+	subjectNames := []string{
 		"Mathematics",
 		"Science",
 		"History",
@@ -38,9 +36,8 @@ func seedSubjects(db *sql.DB) error {
 		"Art",
 		"Music",
 	}
-	for _, subject := range subjects {
-		id := uuid.NewString()
-		if _, err := db.Exec("INSERT INTO subjects (id, name) VALUES (?, ?)", id, subject); err != nil {
+	for _, name := range subjectNames {
+		if _, err := db.Exec("INSERT INTO subjects (name) VALUES (?)", name); err != nil {
 			return fmt.Errorf("failed to insert subject: %w", err)
 		}
 	}
@@ -81,9 +78,27 @@ func seedMaterials(db *sql.DB) error {
 			shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 		})
 		for _, subject := range shuffled[:3] {
-			newID := uuid.NewString()
-			if _, err := db.Exec("INSERT INTO materials (id, teacher_id, subject_id, original_material_id) VALUES (?, ?, ?, ?)", newID, teacher.ID, subject.ID, newID); err != nil {
+			// Insert material first, let AUTO_INCREMENT generate the ID
+			result, err := db.Exec(
+				"INSERT INTO materials (teacher_id, subject_id) VALUES (?, ?)",
+				teacher.ID, subject.ID,
+			)
+			if err != nil {
 				return fmt.Errorf("failed to insert material: %w", err)
+			}
+
+			// Get the generated ID
+			materialID, err := result.LastInsertId()
+			if err != nil {
+				return fmt.Errorf("failed to get material ID: %w", err)
+			}
+
+			// Update original_material_id to reference itself
+			if _, err := db.Exec(
+				"UPDATE materials SET original_material_id = ? WHERE id = ?",
+				materialID, materialID,
+			); err != nil {
+				return fmt.Errorf("failed to update original_material_id: %w", err)
 			}
 		}
 	}
@@ -107,9 +122,24 @@ func seedMaterialVersions(db *sql.DB) error {
 		nVersions := 3
 		for versionNumber := range nVersions {
 			versionNumber++ // range starts at 0, so increment to start at 1
-			newID := uuid.NewString()
-			if _, err := db.Exec("INSERT INTO material_versions (id, material_id, title, summary, description, content, version_number, is_main) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", newID, material.ID, "Title", "Summary", "Description", "Content", versionNumber, versionNumber == 1); err != nil {
+			result, err := db.Exec(
+				"INSERT INTO material_versions (material_id, title, summary, description, content, version_number, is_main) VALUES (?, ?, ?, ?, ?, ?, ?)",
+				material.ID, "Title", "Summary", "Description", "Content", versionNumber, versionNumber == 1,
+			)
+			if err != nil {
 				return fmt.Errorf("failed to insert material version: %w", err)
+			}
+			if versionNumber == 1 {
+				versionID, err := result.LastInsertId()
+				if err != nil {
+					return fmt.Errorf("failed to get material version ID: %w", err)
+				}
+				if _, err := db.Exec(
+					"UPDATE materials SET current_version_id = ? WHERE id = ?",
+					versionID, material.ID,
+				); err != nil {
+					return fmt.Errorf("failed to update material current version: %w", err)
+				}
 			}
 		}
 	}
