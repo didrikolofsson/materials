@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/didrikolofsson/materials/internal/domain/school"
+	"github.com/didrikolofsson/materials/internal/repositories"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -30,8 +31,9 @@ func New(port string, db *sql.DB) *Server {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// Routes
-	school.RegisterRoutes(r, db)
+	// Routes - create repository here and pass to domain
+	repo := repositories.NewMySQLSubjectsRepository(db)
+	school.RegisterRoutes(r, repo)
 
 	addr := fmt.Sprintf(":%s", port)
 	srv := &http.Server{

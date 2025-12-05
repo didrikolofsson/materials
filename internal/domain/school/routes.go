@@ -2,13 +2,13 @@
 package school
 
 import (
-	"database/sql"
-
+	"github.com/didrikolofsson/materials/internal/repositories"
 	"github.com/go-chi/chi/v5"
 )
 
-func RegisterRoutes(r chi.Router, db *sql.DB) {
-	repo := NewMySQLSubjectsRepository(db)
+// RegisterRoutes registers all routes for the school domain
+// Repository should be created outside (in server.go) and passed in
+func RegisterRoutes(r chi.Router, repo repositories.SubjectsRepository) {
 	service := NewSubjectService(repo)
 	handler := NewSchoolHandler(service)
 

@@ -3,16 +3,19 @@ package school
 
 import (
 	"context"
+
+	"github.com/didrikolofsson/materials/internal/models"
+	"github.com/didrikolofsson/materials/internal/repositories"
 )
 
 type SubjectService struct {
-	r SubjectsRepository
+	r repositories.SubjectsRepository
 }
 
-func NewSubjectService(r SubjectsRepository) *SubjectService {
+func NewSubjectService(r repositories.SubjectsRepository) *SubjectService {
 	return &SubjectService{r: r}
 }
 
-func (s *SubjectService) ListSubjects(ctx context.Context) ([]Subject, error) {
-	return s.r.List(ctx, nil)
+func (s *SubjectService) ListSubjects(ctx context.Context) ([]models.Subject, error) {
+	return s.r.List(ctx)
 }

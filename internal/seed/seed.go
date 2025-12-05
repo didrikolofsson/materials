@@ -7,7 +7,7 @@ import (
 	"log"
 	"math/rand/v2"
 
-	"github.com/didrikolofsson/materials/internal/domain/school"
+	"github.com/didrikolofsson/materials/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -56,14 +56,14 @@ func seedMaterials(db *sql.DB) error {
 	}
 	defer teachers.Close()
 
-	var subjects []school.Subject
+	var subjects []models.Subject
 	rows, err := db.Query("SELECT id, name FROM subjects")
 	if err != nil {
 		return fmt.Errorf("failed to query subjects: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var subject school.Subject
+		var subject models.Subject
 		if err := rows.Scan(&subject.ID, &subject.Name); err != nil {
 			return fmt.Errorf("failed to scan subject: %w", err)
 		}
@@ -71,11 +71,11 @@ func seedMaterials(db *sql.DB) error {
 	}
 
 	for teachers.Next() {
-		var teacher school.Teacher
+		var teacher models.Teacher
 		if err := teachers.Scan(&teacher.ID, &teacher.Name); err != nil {
 			return fmt.Errorf("failed to scan teacher: %w", err)
 		}
-		shuffled := make([]school.Subject, len(subjects))
+		shuffled := make([]models.Subject, len(subjects))
 		copy(shuffled, subjects)
 		rand.Shuffle(len(shuffled), func(i, j int) {
 			shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
@@ -100,7 +100,7 @@ func seedMaterialVersions(db *sql.DB) error {
 	defer materials.Close()
 
 	for materials.Next() {
-		var material school.Material
+		var material models.Material
 		if err := materials.Scan(&material.ID, &material.TeacherID, &material.SubjectID, &material.OriginalMaterialID); err != nil {
 			return fmt.Errorf("failed to scan material: %w", err)
 		}
