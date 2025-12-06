@@ -15,13 +15,14 @@ import (
 	"github.com/didrikolofsson/materials/internal/domain/school"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-playground/validator/v10"
 )
 
 type Server struct {
 	httpServer *http.Server
 }
 
-func New(port string, db *sql.DB) *Server {
+func New(port string, db *sql.DB, validate *validator.Validate) *Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -30,7 +31,7 @@ func New(port string, db *sql.DB) *Server {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	school.RegisterRoutes(r, db)
+	school.RegisterRoutes(r, db, validate)
 
 	addr := fmt.Sprintf(":%s", port)
 	srv := &http.Server{

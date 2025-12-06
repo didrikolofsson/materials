@@ -13,10 +13,13 @@ import (
 
 type HandlerDomainSchool struct {
 	s *ServiceDomainSchool
+	v *validator.Validate
 }
 
-func NewHandlerDomainSchool(service *ServiceDomainSchool) *HandlerDomainSchool {
-	return &HandlerDomainSchool{s: service}
+func NewHandlerDomainSchool(
+	service *ServiceDomainSchool, validate *validator.Validate,
+) *HandlerDomainSchool {
+	return &HandlerDomainSchool{s: service, v: validate}
 }
 
 func (h *HandlerDomainSchool) handleListSubjects(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +76,6 @@ func (h *HandlerDomainSchool) handleGetMaterialByID(w http.ResponseWriter, r *ht
 
 func (h *HandlerDomainSchool) handleCreateMaterial(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	validate := validator.New()
 
 	teacherID, err := strconv.ParseInt(chi.URLParam(r, "teacher_id"), 10, 64)
 	if err != nil {
@@ -104,7 +106,7 @@ func (h *HandlerDomainSchool) handleCreateMaterial(w http.ResponseWriter, r *htt
 		Body:   body,
 	}
 
-	if err = validate.Struct(request); err != nil {
+	if err = h.v.Struct(request); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
