@@ -20,7 +20,6 @@ func InitDependencies(cfg config.Config) Dependencies {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	defer db.Close()
 
 	return Dependencies{
 		DB:       db,
@@ -32,6 +31,7 @@ func main() {
 	cfg := config.Load()
 
 	deps := InitDependencies(cfg)
+	defer deps.DB.Close()
 
 	srv := infrahttp.New(
 		cfg.Port, deps.DB, deps.Validate,

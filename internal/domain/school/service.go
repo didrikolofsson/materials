@@ -26,9 +26,13 @@ func (s *ServiceDomainSchool) ListTeachers(ctx context.Context) ([]models.Teache
 	return s.r.Teachers.List(ctx, s.db)
 }
 
+func (s *ServiceDomainSchool) ListAllMaterialsByTeacherID(ctx context.Context, teacherID models.GenericID) ([]models.Material, error) {
+	return s.r.Materials.ListAllByTeacherID(ctx, s.db, teacherID)
+}
+
 func (s *ServiceDomainSchool) CreateMaterialWithInitialVersion(
 	ctx context.Context, m *models.CreateMaterialRequest,
-) (models.MaterialID, models.MaterialVersionID, error) {
+) (models.GenericID, models.GenericID, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -41,6 +45,11 @@ func (s *ServiceDomainSchool) CreateMaterialWithInitialVersion(
 	})
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to create material: %w", err)
+	}
+
+	_, err = s.r.Materials.UpdateOriginalMaterialID(ctx, tx, materialID, materialID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to update original material id: %w", err)
 	}
 
 	materialVersion := &models.MaterialVersion{
@@ -58,18 +67,42 @@ func (s *ServiceDomainSchool) CreateMaterialWithInitialVersion(
 		return 0, 0, fmt.Errorf("failed to create material version: %w", err)
 	}
 
+	materialVersionID, err = s.r.Materials.UpdateCurrentVersion(ctx, tx, materialID, materialVersionID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to update current version: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return 0, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return materialID, materialVersionID, nil
 }
 
-func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v int64) error {
-	err := s.r.Materials.UpdateCurrentVersion(ctx, s.db, m, v)
-	return err
+// ListMaterialVersionsByMaterialID lists all material versions for a given material ID
+func (s *ServiceDomainSchool) ListMaterialVersionsByMaterialID(ctx context.Context, materialID models.GenericID) ([]models.MaterialVersion, error) {
+	materialVersions, err := s.r.MaterialVersions.ListAllByMaterialID(ctx, s.db, materialID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list material versions by material id: %w", err)
+	}
+	return materialVersions, nil
 }
 
-func (s *ServiceDomainSchool) GetMaterialByID(ctx context.Context, id int64) (*models.Material, error) {
-	m, err := s.r.Materials.GetByID(ctx, s.db, id)
-	return m, err
+func (s *ServiceDomainSchool) UpdateCurrentVersion(ctx context.Context, m, v models.GenericID) (models.GenericID, error) {
+	materialVersionID, err := s.r.Materials.UpdateCurrentVersion(ctx, s.db, m, v)
+	if err != nil {
+		return 0, fmt.Errorf("failed to update current version: %w", err)
+	}
+	return materialVersionID, nil
+}
+
+func (s *ServiceDomainSchool) GetMaterialByID(ctx context.Context, id models.GenericID) (*models.Material, error) {
+	return s.r.Materials.GetByID(ctx, s.db, id)
+}
+
+func (s *ServiceDomainSchool) UpdateMainVersionForMaterialByVersionID(ctx context.Context, r *models.UpdateMainVersionForMaterialRequest) error {
+	err := s.r.MaterialVersions.SetMainForMaterialVersion(ctx, s.db, r.Params.MaterialID, r.Body.MaterialVersionID)
+	if err != nil {
+		return fmt.Errorf("failed to set main version for material by version id: %w", err)
+	}
+	return nil
 }

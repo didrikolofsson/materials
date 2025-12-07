@@ -52,25 +52,84 @@ func (h *HandlerDomainSchool) handleListTeachers(w http.ResponseWriter, r *http.
 	}
 }
 
-func (h *HandlerDomainSchool) handleGetMaterialByID(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerDomainSchool) handleListAllMaterialsByTeacherID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
-	id := chi.URLParam(r, "id")
-	idInt, err := strconv.ParseInt(id, 10, 64)
+	teacherID, err := strconv.ParseInt(chi.URLParam(r, "teacher_id"), 10, 64)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	material, err := h.s.GetMaterialByID(ctx, idInt)
+	materials, err := h.s.ListAllMaterialsByTeacherID(ctx, models.GenericID(teacherID))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(materials); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HandlerDomainSchool) handleListMaterialVersionsByMaterialID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	materialID, err := strconv.ParseInt(chi.URLParam(r, "material_id"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	materialVersions, err := h.s.ListMaterialVersionsByMaterialID(ctx, models.GenericID(materialID))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(materialVersions); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *HandlerDomainSchool) handleUpdateMaterialMainVersionByVersionID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	materialID, err := strconv.ParseInt(chi.URLParam(r, "material_id"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	params := models.UpdateMainVersionForMaterialParams{
+		MaterialID: models.GenericID(materialID),
+	}
+	var body models.UpdateMainVersionForMaterialBody
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&body); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	request := models.UpdateMainVersionForMaterialRequest{
+		Params: params,
+		Body:   body,
+	}
+	if err = h.v.Struct(request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.s.UpdateMainVersionForMaterialByVersionID(ctx, &request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	response := models.UpdateMainVersionForMaterialResponse{
+		MaterialID:        request.Params.MaterialID,
+		MaterialVersionID: request.Body.MaterialVersionID,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(material); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -89,8 +148,8 @@ func (h *HandlerDomainSchool) handleCreateMaterial(w http.ResponseWriter, r *htt
 	}
 
 	params := models.CreateMaterialParams{
-		TeacherID: models.TeacherID(teacherID),
-		SubjectID: models.SubjectID(subjectID),
+		TeacherID: models.GenericID(teacherID),
+		SubjectID: models.GenericID(subjectID),
 	}
 
 	var body models.CreateMaterialBody
