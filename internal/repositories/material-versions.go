@@ -11,7 +11,7 @@ type MaterialVersionsRepository interface {
 	Create(ctx context.Context, tx TxOrDB, v *models.MaterialVersion) (models.GenericID, error)
 	SetMainForMaterialVersion(ctx context.Context, tx TxOrDB, materialID, materialVersionID models.GenericID) error
 	ListAllByMaterialID(ctx context.Context, tx TxOrDB, materialID models.GenericID) ([]models.MaterialVersion, error)
-	// GetByID(ctx context.Context, tx TxOrDB, id models.GenericID) (*models.MaterialVersion, error)
+	GetByMaterialAndVersionID(ctx context.Context, tx TxOrDB, materialID, materialVersionID models.GenericID) (*models.MaterialVersion, error)
 }
 
 type MySQLMaterialVersionsRepository struct{}
@@ -140,4 +140,63 @@ func (r *MySQLMaterialVersionsRepository) ListAllByMaterialID(
 		return nil, fmt.Errorf("failed to list all material versions by material id: %w", err)
 	}
 	return materialVersions, nil
+}
+
+func (r *MySQLMaterialVersionsRepository) GetByMaterialAndVersionID(
+	ctx context.Context, tx TxOrDB, materialID, materialVersionID models.GenericID,
+) (*models.MaterialVersion, error) {
+	// Verify that material and version exist
+	var materialExists, materialVersionExists bool
+	checkQuery := `
+		SELECT 
+			EXISTS(SELECT 1 FROM materials WHERE id = ?) as material_exists,
+			EXISTS(SELECT 1 FROM material_versions WHERE id = ?) as material_version_exists
+	`
+	if err := tx.QueryRowContext(
+		ctx, checkQuery, materialID, materialVersionID,
+	).Scan(&materialExists, &materialVersionExists); err != nil {
+		return nil, fmt.Errorf("failed to check if material and version exist: %w", err)
+	}
+	if !materialExists {
+		return nil, fmt.Errorf("material %d does not exist", materialID)
+	}
+	if !materialVersionExists {
+		return nil, fmt.Errorf("material version %d does not exist", materialVersionID)
+	}
+
+	// Verify that the material version belongs to the material
+	var materialVersionBelongsToMaterial bool
+	checkMaterialVersionBelongsToMaterialQuery := `
+		SELECT EXISTS(SELECT 1 FROM material_versions WHERE id = ? AND material_id = ?)
+	`
+	if err := tx.QueryRowContext(
+		ctx, checkMaterialVersionBelongsToMaterialQuery, materialVersionID, materialID,
+	).Scan(&materialVersionBelongsToMaterial); err != nil {
+		return nil, fmt.Errorf("failed to check if material version belongs to material: %w", err)
+	}
+	if !materialVersionBelongsToMaterial {
+		return nil, fmt.Errorf("material version %d does not belong to material %d", materialVersionID, materialID)
+	}
+
+	query := `
+		SELECT id, material_id, title, summary, description, content, version_number, is_main, created_at
+		FROM material_versions
+		WHERE id = ?;
+	`
+
+	var materialVersion models.MaterialVersion
+	if err := tx.QueryRowContext(ctx, query, materialVersionID).Scan(
+		&materialVersion.ID,
+		&materialVersion.MaterialID,
+		&materialVersion.Title,
+		&materialVersion.Summary,
+		&materialVersion.Description,
+		&materialVersion.Content,
+		&materialVersion.VersionNumber,
+		&materialVersion.IsMain,
+		&materialVersion.CreatedAt,
+	); err != nil {
+		return nil, fmt.Errorf("failed to get material version by id: %w", err)
+	}
+	return &materialVersion, nil
 }

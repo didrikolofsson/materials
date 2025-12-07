@@ -187,3 +187,27 @@ func (h *HandlerDomainSchool) handleCreateMaterial(w http.ResponseWriter, r *htt
 		return
 	}
 }
+
+func (h *HandlerDomainSchool) handleGetMaterialVersionByVersionID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	materialID, err := strconv.ParseInt(chi.URLParam(r, "material_id"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	versionID, err := strconv.ParseInt(chi.URLParam(r, "version_id"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	materialVersion, err := h.s.GetMaterialVersionByVersionID(ctx, models.GenericID(materialID), models.GenericID(versionID))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(materialVersion); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}

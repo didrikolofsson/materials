@@ -106,3 +106,13 @@ func (s *ServiceDomainSchool) UpdateMainVersionForMaterialByVersionID(ctx contex
 	}
 	return nil
 }
+
+func (s *ServiceDomainSchool) GetMaterialVersionByVersionID(
+	ctx context.Context, materialID, versionID models.GenericID,
+) (*models.MaterialVersion, error) {
+	materialVersion, err := s.r.MaterialVersions.GetByMaterialAndVersionID(ctx, s.db, materialID, versionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get material version by version id: %w", err)
+	}
+	return materialVersion, nil
+}

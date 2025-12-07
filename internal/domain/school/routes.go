@@ -19,5 +19,6 @@ func RegisterRoutes(r chi.Router, db *sql.DB, validate *validator.Validate) {
 	r.Post("/teachers/{teacher_id}/materials/{subject_id}", handler.handleCreateMaterial)
 	r.Get("/teachers/{teacher_id}/materials/{subject_id}/{material_id}/versions", handler.handleListMaterialVersionsByMaterialID)
 	r.Put("/teachers/{teacher_id}/materials/{subject_id}/{material_id}/versions/main", handler.handleUpdateMaterialMainVersionByVersionID)
+	r.Get("/teachers/{teacher_id}/materials/{subject_id}/{material_id}/versions/{version_id}", handler.handleGetMaterialVersionByVersionID)
 
 }
