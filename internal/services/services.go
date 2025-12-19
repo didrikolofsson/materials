@@ -4,9 +4,9 @@ package services
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/didrikolofsson/materials/generated/queries"
+	customerrors "github.com/didrikolofsson/materials/internal/errors"
 	"github.com/didrikolofsson/materials/internal/models"
 	"github.com/didrikolofsson/materials/internal/repositories"
 )
@@ -26,7 +26,7 @@ func New(db *sql.DB, repos *repositories.MySQLRepository) *Services {
 func (s *Services) ListTeachers(ctx context.Context) ([]models.Teacher, error) {
 	res, err := s.repos.ListTeachers(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list teachers: %w", err)
+		return nil, err
 	}
 	teachers := make([]models.Teacher, len(res))
 	for i, teacher := range res {
@@ -42,7 +42,7 @@ func (s *Services) ListTeachers(ctx context.Context) ([]models.Teacher, error) {
 func (s *Services) ListSubjects(ctx context.Context) ([]models.Subject, error) {
 	res, err := s.repos.ListSubjects(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list subjects: %w", err)
+		return nil, err
 	}
 	subjects := make([]models.Subject, len(res))
 	for i, subject := range res {
@@ -58,7 +58,7 @@ func (s *Services) ListSubjects(ctx context.Context) ([]models.Subject, error) {
 func (s *Services) ListAllMaterials(ctx context.Context) ([]models.Material, error) {
 	res, err := s.repos.ListAllMaterials(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list all materials: %w", err)
+		return nil, err
 	}
 	materials := make([]models.Material, len(res))
 	for i, material := range res {
@@ -78,7 +78,7 @@ func (s *Services) ListAllMaterials(ctx context.Context) ([]models.Material, err
 func (s *Services) ListMaterialVersionsByMaterialID(ctx context.Context, materialID int64) ([]models.MaterialVersion, error) {
 	res, err := s.repos.ListMaterialVersionsByMaterialID(ctx, materialID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list material versions by material ID: %w", err)
+		return nil, err
 	}
 	materialVersions := make([]models.MaterialVersion, len(res))
 	for i, materialVersion := range res {
@@ -99,7 +99,7 @@ func (s *Services) ListMaterialVersionsByMaterialID(ctx context.Context, materia
 func (s *Services) GetTeacherByID(ctx context.Context, id int64) (models.Teacher, error) {
 	teacher, err := s.repos.GetTeacherByID(ctx, id)
 	if err != nil {
-		return models.Teacher{}, fmt.Errorf("failed to get teacher by ID: %w", err)
+		return models.Teacher{}, err
 	}
 	return models.Teacher{
 		ID:        teacher.ID,
@@ -111,7 +111,7 @@ func (s *Services) GetTeacherByID(ctx context.Context, id int64) (models.Teacher
 func (s *Services) GetTeacherMaterials(ctx context.Context, teacherID int64) ([]models.Material, error) {
 	res, err := s.repos.GetTeacherMaterials(ctx, teacherID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get teacher materials: %w", err)
+		return nil, err
 	}
 	materials := make([]models.Material, len(res))
 	for i, material := range res {
@@ -131,7 +131,7 @@ func (s *Services) GetTeacherMaterials(ctx context.Context, teacherID int64) ([]
 func (s *Services) GetTeacherMaterialByID(ctx context.Context, teacherID, materialID int64) (models.Material, error) {
 	material, err := s.repos.GetTeacherMaterialByID(ctx, teacherID, materialID)
 	if err != nil {
-		return models.Material{}, fmt.Errorf("failed to get teacher material by ID: %w", err)
+		return models.Material{}, err
 	}
 	return models.Material{
 		ID:          material.ID,
@@ -155,7 +155,7 @@ func (s *Services) CreateInitialTeacherMaterial(ctx context.Context, teacherID i
 		req,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create initial teacher material: %w", err)
+		return 0, err
 	}
 
 	return materialID, nil
@@ -164,16 +164,16 @@ func (s *Services) CreateInitialTeacherMaterial(ctx context.Context, teacherID i
 func (s *Services) UpdateTeacherMaterialByID(ctx context.Context, teacherID, materialID int64, req models.UpdateMaterialRequest) (models.Material, error) {
 	_, err := s.repos.GetTeacherMaterialByID(ctx, teacherID, materialID)
 	if err != nil {
-		return models.Material{}, fmt.Errorf("failed to get material: %w", err)
+		return models.Material{}, err
 	}
 
 	// Get the current version to use as defaults
 	versions, err := s.repos.ListMaterialVersionsByMaterialID(ctx, materialID)
 	if err != nil {
-		return models.Material{}, fmt.Errorf("failed to get material versions: %w", err)
+		return models.Material{}, err
 	}
 	if len(versions) == 0 {
-		return models.Material{}, fmt.Errorf("no versions found for material")
+		return models.Material{}, customerrors.ErrBadRequest
 	}
 
 	// Find the main version
@@ -211,19 +211,19 @@ func (s *Services) UpdateTeacherMaterialByID(ctx context.Context, teacherID, mat
 		ctx, materialID, title, summary, description, content, true,
 	)
 	if err != nil {
-		return models.Material{}, fmt.Errorf("failed to create material version: %w", err)
+		return models.Material{}, err
 	}
 
 	// Update all versions to set is_main = false, then set the new one to true
 	err = s.repos.UpdateMaterialVersionMain(ctx, materialID, versionID)
 	if err != nil {
-		return models.Material{}, fmt.Errorf("failed to update material version main: %w", err)
+		return models.Material{}, err
 	}
 
 	// Update the material's current_version_id
 	err = s.repos.UpdateMaterialCurrentVersion(ctx, materialID, versionID)
 	if err != nil {
-		return models.Material{}, fmt.Errorf("failed to update material current version: %w", err)
+		return models.Material{}, err
 	}
 
 	// Return the updated material
@@ -234,13 +234,13 @@ func (s *Services) DeleteTeacherMaterialByID(ctx context.Context, teacherID, mat
 	// Verify the material belongs to the teacher
 	_, err := s.repos.GetTeacherMaterialByID(ctx, teacherID, materialID)
 	if err != nil {
-		return fmt.Errorf("failed to get material: %w", err)
+		return err
 	}
 
 	// Delete the material (cascade should handle versions)
 	err = s.repos.DeleteMaterial(ctx, materialID)
 	if err != nil {
-		return fmt.Errorf("failed to delete material: %w", err)
+		return err
 	}
 	return nil
 }
@@ -248,13 +248,13 @@ func (s *Services) DeleteTeacherMaterialByID(ctx context.Context, teacherID, mat
 func (s *Services) UpdateMaterialVersionMain(ctx context.Context, materialID, versionID int64) error {
 	err := s.repos.UpdateMaterialVersionMain(ctx, materialID, versionID)
 	if err != nil {
-		return fmt.Errorf("failed to update material version main: %w", err)
+		return err
 	}
 
 	// Also update the material's current_version_id
 	err = s.repos.UpdateMaterialCurrentVersion(ctx, materialID, versionID)
 	if err != nil {
-		return fmt.Errorf("failed to update material current version: %w", err)
+		return err
 	}
 	return nil
 }

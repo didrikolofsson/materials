@@ -3,9 +3,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
+	customerrors "github.com/didrikolofsson/materials/internal/errors"
 	"github.com/didrikolofsson/materials/internal/models"
 	"github.com/didrikolofsson/materials/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -38,6 +40,10 @@ func (h *Handlers) ListTeachers(w http.ResponseWriter, r *http.Request) {
 
 	teachers, err := h.svc.ListTeachers(ctx)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Teachers not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -54,6 +60,10 @@ func (h *Handlers) ListSubjects(w http.ResponseWriter, r *http.Request) {
 
 	subjects, err := h.svc.ListSubjects(ctx)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Subjects not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -70,6 +80,10 @@ func (h *Handlers) ListAllMaterials(w http.ResponseWriter, r *http.Request) {
 
 	materials, err := h.svc.ListAllMaterials(ctx)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Materials not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -98,6 +112,10 @@ func (h *Handlers) ListMaterialVersionsByMaterialID(w http.ResponseWriter, r *ht
 
 	materialVersions, err := h.svc.ListMaterialVersionsByMaterialID(ctx, materialIDInt)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Teacher not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -126,6 +144,10 @@ func (h *Handlers) GetTeacherByID(w http.ResponseWriter, r *http.Request) {
 
 	teacher, err := h.svc.GetTeacherByID(ctx, teacherIDInt)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Teacher materials not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -154,6 +176,10 @@ func (h *Handlers) GetTeacherMaterials(w http.ResponseWriter, r *http.Request) {
 
 	materials, err := h.svc.GetTeacherMaterials(ctx, teacherIDInt)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Teacher materials not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -193,6 +219,7 @@ func (h *Handlers) CreateInitialTeacherMaterial(w http.ResponseWriter, r *http.R
 
 	materialID, err := h.svc.CreateInitialTeacherMaterial(ctx, teacherIDInt, req)
 	if err != nil {
+		// TODO: Handle error
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -234,6 +261,10 @@ func (h *Handlers) GetTeacherMaterialByID(w http.ResponseWriter, r *http.Request
 
 	material, err := h.svc.GetTeacherMaterialByID(ctx, teacherIDInt, materialIDInt)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrNotFound) {
+			http.Error(w, "Material not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -273,18 +304,19 @@ func (h *Handlers) UpdateTeacherMaterialByID(w http.ResponseWriter, r *http.Requ
 	}
 
 	var req models.UpdateMaterialRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.validate.Struct(req); err != nil {
+	if err = h.validate.Struct(req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	material, err := h.svc.UpdateTeacherMaterialByID(ctx, teacherIDInt, materialIDInt, req)
 	if err != nil {
+		// TODO: Handle error
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -323,7 +355,8 @@ func (h *Handlers) DeleteTeacherMaterialByID(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := h.svc.DeleteTeacherMaterialByID(ctx, teacherIDInt, materialIDInt); err != nil {
+	if err = h.svc.DeleteTeacherMaterialByID(ctx, teacherIDInt, materialIDInt); err != nil {
+		// TODO: Handle error
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -358,7 +391,8 @@ func (h *Handlers) UpdateMaterialVersionMain(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := h.svc.UpdateMaterialVersionMain(ctx, materialIDInt, versionIDInt); err != nil {
+	if err = h.svc.UpdateMaterialVersionMain(ctx, materialIDInt, versionIDInt); err != nil {
+		// TODO: Handle error
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -4,9 +4,10 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 
 	"github.com/didrikolofsson/materials/generated/queries"
+	customerrors "github.com/didrikolofsson/materials/internal/errors"
 	"github.com/didrikolofsson/materials/internal/models"
 )
 
@@ -26,7 +27,10 @@ func New(db *sql.DB) *MySQLRepository {
 func (r *MySQLRepository) ListTeachers(ctx context.Context) ([]queries.Teacher, error) {
 	teachers, err := r.q.ListTeachers(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list teachers: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customerrors.ErrNotFound
+		}
+		return nil, customerrors.ErrInternal
 	}
 	return teachers, nil
 }
@@ -34,7 +38,10 @@ func (r *MySQLRepository) ListTeachers(ctx context.Context) ([]queries.Teacher, 
 func (r *MySQLRepository) ListSubjects(ctx context.Context) ([]queries.Subject, error) {
 	subjects, err := r.q.ListSubjects(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list subjects: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customerrors.ErrNotFound
+		}
+		return nil, customerrors.ErrInternal
 	}
 	return subjects, nil
 }
@@ -42,7 +49,10 @@ func (r *MySQLRepository) ListSubjects(ctx context.Context) ([]queries.Subject, 
 func (r *MySQLRepository) ListAllMaterials(ctx context.Context) ([]queries.ListAllMaterialsRow, error) {
 	materials, err := r.q.ListAllMaterials(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list all materials: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customerrors.ErrNotFound
+		}
+		return nil, customerrors.ErrInternal
 	}
 	return materials, nil
 }
@@ -50,7 +60,10 @@ func (r *MySQLRepository) ListAllMaterials(ctx context.Context) ([]queries.ListA
 func (r *MySQLRepository) ListMaterialVersionsByMaterialID(ctx context.Context, materialID int64) ([]queries.ListMaterialVersionsByMaterialIDRow, error) {
 	materialVersions, err := r.q.ListMaterialVersionsByMaterialID(ctx, materialID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list material versions by material ID: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customerrors.ErrNotFound
+		}
+		return nil, customerrors.ErrInternal
 	}
 	return materialVersions, nil
 }
@@ -58,7 +71,10 @@ func (r *MySQLRepository) ListMaterialVersionsByMaterialID(ctx context.Context, 
 func (r *MySQLRepository) GetTeacherByID(ctx context.Context, id int64) (queries.Teacher, error) {
 	teacher, err := r.q.GetTeacherByID(ctx, id)
 	if err != nil {
-		return queries.Teacher{}, fmt.Errorf("failed to get teacher by ID: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return queries.Teacher{}, customerrors.ErrNotFound
+		}
+		return queries.Teacher{}, customerrors.ErrInternal
 	}
 	return teacher, nil
 }
@@ -66,7 +82,10 @@ func (r *MySQLRepository) GetTeacherByID(ctx context.Context, id int64) (queries
 func (r *MySQLRepository) GetTeacherMaterials(ctx context.Context, teacherID int64) ([]queries.GetTeacherMaterialsRow, error) {
 	materials, err := r.q.GetTeacherMaterials(ctx, teacherID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get teacher materials: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customerrors.ErrNotFound
+		}
+		return nil, customerrors.ErrInternal
 	}
 	return materials, nil
 }
@@ -77,7 +96,10 @@ func (r *MySQLRepository) GetTeacherMaterialByID(ctx context.Context, teacherID,
 		ID:        materialID,
 	})
 	if err != nil {
-		return queries.GetTeacherMaterialByIDRow{}, fmt.Errorf("failed to get teacher material by ID: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return queries.GetTeacherMaterialByIDRow{}, customerrors.ErrNotFound
+		}
+		return queries.GetTeacherMaterialByIDRow{}, customerrors.ErrInternal
 	}
 	return material, nil
 }
@@ -90,7 +112,7 @@ func (r *MySQLRepository) CreateInitialTeacherMaterial(
 ) (int64, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 	defer tx.Rollback()
 
@@ -103,11 +125,11 @@ func (r *MySQLRepository) CreateInitialTeacherMaterial(
 		OriginalMaterialID: toNullInt64(nil),
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to create material: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 	materialID, err := res.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get material ID: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	// Create version
@@ -120,11 +142,11 @@ func (r *MySQLRepository) CreateInitialTeacherMaterial(
 		IsMain:      true,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to create material version: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 	versionID, err := res.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get material version ID: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	// Update material current version
@@ -133,12 +155,12 @@ func (r *MySQLRepository) CreateInitialTeacherMaterial(
 		ID:               materialID,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to update material current version: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	return materialID, nil
@@ -147,7 +169,7 @@ func (r *MySQLRepository) CreateInitialTeacherMaterial(
 func (r *MySQLRepository) GetMaxVersionNumber(ctx context.Context, materialID int64) (int32, error) {
 	maxVersion, err := r.q.GetMaxVersionNumber(ctx, materialID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get max version number: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 	return int32(maxVersion), nil
 }
@@ -155,14 +177,14 @@ func (r *MySQLRepository) GetMaxVersionNumber(ctx context.Context, materialID in
 func (r *MySQLRepository) CreateMaterialVersion(ctx context.Context, materialID int64, title string, summary, description *string, content string, isMain bool) (int64, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 	defer tx.Rollback()
 
 	qtx := r.q.WithTx(tx)
 	maxVersion, err := qtx.GetMaxVersionNumber(ctx, materialID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get max version number: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	result, err := qtx.CreateMaterialVersion(ctx, queries.CreateMaterialVersionParams{
@@ -175,17 +197,17 @@ func (r *MySQLRepository) CreateMaterialVersion(ctx context.Context, materialID 
 		VersionNumber: int32(maxVersion + 1),
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to create material version: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 
 	versionID, err := result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get material version ID: %w", err)
+		return 0, customerrors.ErrInternal
 	}
 	return versionID, nil
 }
@@ -196,7 +218,7 @@ func (r *MySQLRepository) UpdateMaterialCurrentVersion(ctx context.Context, mate
 		ID:               materialID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update material current version: %w", err)
+		return customerrors.ErrInternal
 	}
 	return nil
 }
@@ -207,7 +229,7 @@ func (r *MySQLRepository) UpdateMaterialVersionMain(ctx context.Context, materia
 		MaterialID: materialID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update material version main: %w", err)
+		return customerrors.ErrInternal
 	}
 	return nil
 }
@@ -215,7 +237,7 @@ func (r *MySQLRepository) UpdateMaterialVersionMain(ctx context.Context, materia
 func (r *MySQLRepository) DeleteMaterial(ctx context.Context, id int64) error {
 	err := r.q.DeleteMaterial(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete material: %w", err)
+		return customerrors.ErrInternal
 	}
 	return nil
 }
