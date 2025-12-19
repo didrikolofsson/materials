@@ -116,7 +116,7 @@ func seedMaterialVersions(db *sql.DB) error {
 
 	for materials.Next() {
 		var material models.Material
-		if err := materials.Scan(&material.ID, &material.TeacherID, &material.SubjectID, &material.OriginalMaterialID); err != nil {
+		if err := materials.Scan(&material.ID, &material.TeacherName, &material.SubjectName, &material.CreatedAt); err != nil {
 			return fmt.Errorf("failed to scan material: %w", err)
 		}
 		nVersions := 3

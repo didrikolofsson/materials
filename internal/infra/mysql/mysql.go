@@ -8,17 +8,13 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func New(dsn string) (*sql.DB, error) {
+func New(dsn string) *sql.DB {
 	db, err := sql.Open("mysql", dsn)
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		panic(fmt.Errorf("failed to open database: %w", err))
 	}
-
-	// Test connection
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		panic(fmt.Errorf("failed to ping database: %w", err))
 	}
-
-	return db, nil
+	return db
 }

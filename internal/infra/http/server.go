@@ -3,7 +3,6 @@ package http
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,17 +11,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/didrikolofsson/materials/internal/domain/school"
+	"github.com/didrikolofsson/materials/internal/handlers"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-playground/validator/v10"
 )
 
 type Server struct {
 	httpServer *http.Server
 }
 
-func New(port string, db *sql.DB, validate *validator.Validate) *Server {
+func New(port string, handlers *handlers.Handlers) *Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -31,7 +29,25 @@ func New(port string, db *sql.DB, validate *validator.Validate) *Server {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	school.RegisterRoutes(r, db, validate)
+	// Routes (Possibly admin routes)
+	r.Get("/teachers", handlers.ListTeachers)
+	r.Get("/subjects", handlers.ListSubjects)
+
+	// Routes (Possibly public)
+	r.Get("/materials", handlers.ListAllMaterials)
+	r.Get("/materials/{id}/versions", handlers.ListMaterialVersionsByMaterialID)
+	r.Put("/materials/{id}/versions/{version_id}/main", handlers.UpdateMaterialVersionMain)
+
+	// Teacher routes
+	r.Get("/teachers/{id}", handlers.GetTeacherByID)
+	r.Get("/teachers/{id}/materials", handlers.GetTeacherMaterials)
+	r.Post("/teachers/{id}/materials", handlers.CreateInitialTeacherMaterial)
+	r.Get("/teachers/{id}/materials/{material_id}", handlers.GetTeacherMaterialByID)
+	r.Put("/teachers/{id}/materials/{material_id}", handlers.UpdateTeacherMaterialByID)
+	r.Delete("/teachers/{id}/materials/{material_id}", handlers.DeleteTeacherMaterialByID)
+
+	// Healthcheck
+	r.Get("/ping", handlers.Ping)
 
 	addr := fmt.Sprintf(":%s", port)
 	srv := &http.Server{

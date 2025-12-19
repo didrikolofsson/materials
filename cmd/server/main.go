@@ -1,40 +1,32 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/didrikolofsson/materials/internal/config"
+	"github.com/didrikolofsson/materials/internal/handlers"
 	infrahttp "github.com/didrikolofsson/materials/internal/infra/http"
-	infradb "github.com/didrikolofsson/materials/internal/infra/mysql"
+	"github.com/didrikolofsson/materials/internal/infra/mysql"
+	"github.com/didrikolofsson/materials/internal/repositories"
+	"github.com/didrikolofsson/materials/internal/services"
 	"github.com/go-playground/validator/v10"
 )
-
-type Dependencies struct {
-	DB       *sql.DB
-	Validate *validator.Validate
-}
-
-func InitDependencies(cfg config.Config) Dependencies {
-	db, err := infradb.New(cfg.DBDsn)
-	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
-	}
-
-	return Dependencies{
-		DB:       db,
-		Validate: validator.New(),
-	}
-}
 
 func main() {
 	cfg := config.Load()
 
-	deps := InitDependencies(cfg)
-	defer deps.DB.Close()
+	db := mysql.New(cfg.DBDsn)
+	validate := validator.New()
+
+	repos := repositories.New(db)
+	svc := services.New(db, repos)
+	handlers := handlers.New(svc, validate)
+
+	defer db.Close()
 
 	srv := infrahttp.New(
-		cfg.Port, deps.DB, deps.Validate,
+		cfg.Port,
+		handlers,
 	)
 
 	if err := srv.Run(); err != nil {

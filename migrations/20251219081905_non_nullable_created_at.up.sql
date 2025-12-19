@@ -1,0 +1,4 @@
+ALTER TABLE materials
+MODIFY created_at TIMESTAMP NOT NULL;
+ALTER TABLE material_versions
+MODIFY created_at TIMESTAMP NOT NULL;
