@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/didrikolofsson/materials/internal/config"
@@ -9,10 +10,11 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	cfg := config.Load()
 	db := mysql.New(cfg.DBDsn)
 
-	if err := seed.Run(db); err != nil {
+	if err := seed.Run(ctx, db); err != nil {
 		log.Fatalf("failed to seed database: %v", err)
 	}
 

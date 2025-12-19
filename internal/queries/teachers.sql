@@ -9,3 +9,6 @@ SELECT id,
 	created_at
 FROM teachers
 WHERE id = ?;
+-- name: SeedTeachers :exec
+INSERT INTO teachers (name)
+VALUES (?);

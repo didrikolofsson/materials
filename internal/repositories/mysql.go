@@ -46,8 +46,8 @@ func (r *MySQLRepository) ListSubjects(ctx context.Context) ([]queries.Subject, 
 	return subjects, nil
 }
 
-func (r *MySQLRepository) ListAllMaterials(ctx context.Context) ([]queries.ListAllMaterialsRow, error) {
-	materials, err := r.q.ListAllMaterials(ctx)
+func (r *MySQLRepository) ListMaterials(ctx context.Context) ([]queries.ListMaterialsRow, error) {
+	materials, err := r.q.ListMaterials(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, customerrors.ErrNotFound
@@ -167,11 +167,14 @@ func (r *MySQLRepository) CreateInitialTeacherMaterial(
 }
 
 func (r *MySQLRepository) GetMaxVersionNumber(ctx context.Context, materialID int64) (int32, error) {
-	maxVersion, err := r.q.GetMaxVersionNumber(ctx, materialID)
+	maxVersion, err := r.q.GetMaxVersionNumberByMaterialID(ctx, materialID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
 		return 0, customerrors.ErrInternal
 	}
-	return int32(maxVersion), nil
+	return maxVersion, nil
 }
 
 func (r *MySQLRepository) CreateMaterialVersion(ctx context.Context, materialID int64, title string, summary, description *string, content string, isMain bool) (int64, error) {
@@ -182,9 +185,13 @@ func (r *MySQLRepository) CreateMaterialVersion(ctx context.Context, materialID 
 	defer tx.Rollback()
 
 	qtx := r.q.WithTx(tx)
-	maxVersion, err := qtx.GetMaxVersionNumber(ctx, materialID)
-	if err != nil {
+	maxVersion, err := qtx.GetMaxVersionNumberByMaterialID(ctx, materialID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, customerrors.ErrInternal
+	}
+	// If no rows found, maxVersion is 0, so next version will be 1
+	if errors.Is(err, sql.ErrNoRows) {
+		maxVersion = 0
 	}
 
 	result, err := qtx.CreateMaterialVersion(ctx, queries.CreateMaterialVersionParams{
@@ -194,7 +201,7 @@ func (r *MySQLRepository) CreateMaterialVersion(ctx context.Context, materialID 
 		Description:   toNullString(description),
 		Content:       content,
 		IsMain:        isMain,
-		VersionNumber: int32(maxVersion + 1),
+		VersionNumber: maxVersion + 1,
 	})
 	if err != nil {
 		return 0, customerrors.ErrInternal

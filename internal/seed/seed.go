@@ -2,87 +2,99 @@
 package seed
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"math/rand/v2"
 
-	"github.com/didrikolofsson/materials/internal/models"
+	"github.com/didrikolofsson/materials/generated/queries"
+	"github.com/go-faker/faker/v4"
 )
 
-func seedTeachers(db *sql.DB) error {
-	log.Println("Seeding teachers...")
-	teacherNames := []string{
-		"John Doe",
-		"Jane Doe",
-		"John Smith",
-		"Jane Smith",
+func seedTeachers(ctx context.Context, qtx *queries.Queries) error {
+	nTeachers := 5
+
+	teachers, err := qtx.ListTeachers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query teachers: %w", err)
 	}
-	for _, name := range teacherNames {
-		if _, err := db.Exec("INSERT INTO teachers (name) VALUES (?)", name); err != nil {
+	if len(teachers) > 0 {
+		log.Println("Teachers already seeded..")
+		return nil
+	}
+
+	log.Println("Seeding teachers...")
+	for range nTeachers {
+		d := queries.Teacher{
+			Name: faker.Name(),
+		}
+
+		if err := qtx.SeedTeachers(ctx, d.Name); err != nil {
 			return fmt.Errorf("failed to insert teacher: %w", err)
 		}
 	}
 	return nil
 }
 
-func seedSubjects(db *sql.DB) error {
-	log.Println("Seeding subjects...")
-	subjectNames := []string{
-		"Mathematics",
-		"Science",
-		"History",
-		"English",
-		"Art",
-		"Music",
+func seedSubjects(ctx context.Context, qtx *queries.Queries) error {
+	nSubjects := 5
+
+	subjects, err := qtx.ListSubjects(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query subjects: %w", err)
 	}
-	for _, name := range subjectNames {
-		if _, err := db.Exec("INSERT INTO subjects (name) VALUES (?)", name); err != nil {
+	if len(subjects) > 0 {
+		log.Println("Subjects already seeded..")
+		return nil
+	}
+
+	log.Println("Seeding subjects...")
+	for range nSubjects {
+		d := queries.Subject{
+			Name: faker.Word(),
+		}
+		if err := qtx.SeedSubjects(ctx, d.Name); err != nil {
 			return fmt.Errorf("failed to insert subject: %w", err)
 		}
 	}
 	return nil
 }
 
-func seedMaterials(db *sql.DB) error {
+func seedMaterials(ctx context.Context, qtx *queries.Queries) error {
+	nMaterials := 3
+
+	materials, err := qtx.ListMaterials(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query materials: %w", err)
+	}
+	if len(materials) > 0 {
+		log.Println("Materials already seeded..")
+		return nil
+	}
+
 	log.Println("Seeding materials...")
-	// Get all teachers and subjects
-	teachers, err := db.Query("SELECT id, name FROM teachers")
+	teachers, err := qtx.ListTeachers(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query teachers: %w", err)
 	}
-	defer teachers.Close()
 
-	var subjects []models.Subject
-	rows, err := db.Query("SELECT id, name FROM subjects")
+	subjects, err := qtx.ListSubjects(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query subjects: %w", err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var subject models.Subject
-		if err := rows.Scan(&subject.ID, &subject.Name); err != nil {
-			return fmt.Errorf("failed to scan subject: %w", err)
-		}
-		subjects = append(subjects, subject)
-	}
 
-	for teachers.Next() {
-		var teacher models.Teacher
-		if err := teachers.Scan(&teacher.ID, &teacher.Name); err != nil {
-			return fmt.Errorf("failed to scan teacher: %w", err)
-		}
-		shuffled := make([]models.Subject, len(subjects))
+	for _, teacher := range teachers {
+		shuffled := make([]queries.Subject, len(subjects))
 		copy(shuffled, subjects)
 		rand.Shuffle(len(shuffled), func(i, j int) {
 			shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 		})
-		for _, subject := range shuffled[:3] {
-			// Insert material first, let AUTO_INCREMENT generate the ID
-			result, err := db.Exec(
-				"INSERT INTO materials (teacher_id, subject_id) VALUES (?, ?)",
-				teacher.ID, subject.ID,
-			)
+		for _, subject := range shuffled[:nMaterials] {
+			result, err := qtx.CreateMaterial(ctx, queries.CreateMaterialParams{
+				TeacherID: teacher.ID,
+				SubjectID: sql.NullInt64{Int64: subject.ID, Valid: true},
+			})
 			if err != nil {
 				return fmt.Errorf("failed to insert material: %w", err)
 			}
@@ -94,10 +106,10 @@ func seedMaterials(db *sql.DB) error {
 			}
 
 			// Update original_material_id to reference itself
-			if _, err := db.Exec(
-				"UPDATE materials SET original_material_id = ? WHERE id = ?",
-				materialID, materialID,
-			); err != nil {
+			if err := qtx.UpdateMaterialOriginalID(ctx, queries.UpdateMaterialOriginalIDParams{
+				OriginalMaterialID: sql.NullInt64{Int64: materialID, Valid: true},
+				ID:                 materialID,
+			}); err != nil {
 				return fmt.Errorf("failed to update original_material_id: %w", err)
 			}
 		}
@@ -105,27 +117,38 @@ func seedMaterials(db *sql.DB) error {
 	return nil
 }
 
-func seedMaterialVersions(db *sql.DB) error {
+func seedMaterialVersions(ctx context.Context, qtx *queries.Queries) error {
+	nVersions := 3
+	versionNumber := 0
+
+	materialVersions, err := qtx.ListAllMaterialVersions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query material versions: %w", err)
+	}
+	if len(materialVersions) > 0 {
+		log.Println("Material versions already seeded..")
+		return nil
+	}
 	log.Println("Seeding material versions...")
+
 	// Get all materials
-	materials, err := db.Query("SELECT id, teacher_id, subject_id, original_material_id FROM materials")
+	materials, err := qtx.ListMaterials(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to query materials: %w", err)
 	}
-	defer materials.Close()
 
-	for materials.Next() {
-		var material models.Material
-		if err := materials.Scan(&material.ID, &material.TeacherName, &material.SubjectName, &material.CreatedAt); err != nil {
-			return fmt.Errorf("failed to scan material: %w", err)
-		}
-		nVersions := 3
-		for versionNumber := range nVersions {
-			versionNumber++ // range starts at 0, so increment to start at 1
-			result, err := db.Exec(
-				"INSERT INTO material_versions (material_id, title, summary, description, content, version_number, is_main) VALUES (?, ?, ?, ?, ?, ?, ?)",
-				material.ID, "Title", "Summary", "Description", "Content", versionNumber, versionNumber == 1,
-			)
+	for _, material := range materials {
+		for range nVersions {
+			versionNumber++
+			result, err := qtx.CreateMaterialVersion(ctx, queries.CreateMaterialVersionParams{
+				MaterialID:    material.ID,
+				Title:         faker.Word(),
+				Summary:       sql.NullString{String: faker.Sentence(), Valid: true},
+				Description:   sql.NullString{String: faker.Sentence(), Valid: true},
+				Content:       faker.Paragraph(),
+				VersionNumber: int32(versionNumber),
+				IsMain:        versionNumber == 1,
+			})
 			if err != nil {
 				return fmt.Errorf("failed to insert material version: %w", err)
 			}
@@ -134,51 +157,42 @@ func seedMaterialVersions(db *sql.DB) error {
 				if err != nil {
 					return fmt.Errorf("failed to get material version ID: %w", err)
 				}
-				if _, err := db.Exec(
-					"UPDATE materials SET current_version_id = ? WHERE id = ?",
-					versionID, material.ID,
-				); err != nil {
+				if err := qtx.UpdateMaterialCurrentVersion(ctx, queries.UpdateMaterialCurrentVersionParams{
+					CurrentVersionID: sql.NullInt64{Int64: versionID, Valid: true},
+					ID:               material.ID,
+				}); err != nil {
 					return fmt.Errorf("failed to update material current version: %w", err)
 				}
 			}
 		}
+		versionNumber = 0
 	}
 	return nil
 }
 
-func Run(db *sql.DB) error {
-	var count int
-	if err := db.QueryRow("SELECT COUNT(*) FROM teachers").Scan(&count); err != nil {
-		return fmt.Errorf("failed to count teachers: %w", err)
+func Run(ctx context.Context, db *sql.DB) error {
+	q := queries.New(db)
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	if count == 0 {
-		if err := seedTeachers(db); err != nil {
-			return fmt.Errorf("failed to seed teachers: %w", err)
-		}
+	defer tx.Rollback()
+
+	qtx := q.WithTx(tx)
+
+	if err := seedTeachers(ctx, qtx); err != nil {
+		return fmt.Errorf("failed to seed teachers: %w", err)
 	}
-	if err := db.QueryRow("SELECT COUNT(*) FROM subjects").Scan(&count); err != nil {
-		return fmt.Errorf("failed to count subjects: %w", err)
+	if err := seedSubjects(ctx, qtx); err != nil {
+		return fmt.Errorf("failed to seed subjects: %w", err)
 	}
-	if count == 0 {
-		if err := seedSubjects(db); err != nil {
-			return fmt.Errorf("failed to seed subjects: %w", err)
-		}
+	if err := seedMaterials(ctx, qtx); err != nil {
+		return fmt.Errorf("failed to seed materials: %w", err)
 	}
-	if err := db.QueryRow("SELECT COUNT(*) FROM materials").Scan(&count); err != nil {
-		return fmt.Errorf("failed to count materials: %w", err)
+	if err := seedMaterialVersions(ctx, qtx); err != nil {
+		return fmt.Errorf("failed to seed material versions: %w", err)
 	}
-	if count == 0 {
-		if err := seedMaterials(db); err != nil {
-			return fmt.Errorf("failed to seed materials: %w", err)
-		}
-	}
-	if err := db.QueryRow("SELECT COUNT(*) FROM material_versions").Scan(&count); err != nil {
-		return fmt.Errorf("failed to count material versions: %w", err)
-	}
-	if count == 0 {
-		if err := seedMaterialVersions(db); err != nil {
-			return fmt.Errorf("failed to seed material versions: %w", err)
-		}
-	}
-	return nil
+
+	return tx.Commit()
 }

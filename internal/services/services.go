@@ -55,8 +55,8 @@ func (s *Services) ListSubjects(ctx context.Context) ([]models.Subject, error) {
 	return subjects, nil
 }
 
-func (s *Services) ListAllMaterials(ctx context.Context) ([]models.Material, error) {
-	res, err := s.repos.ListAllMaterials(ctx)
+func (s *Services) ListMaterials(ctx context.Context) ([]models.Material, error) {
+	res, err := s.repos.ListMaterials(ctx)
 	if err != nil {
 		return nil, err
 	}

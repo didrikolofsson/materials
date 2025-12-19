@@ -75,10 +75,10 @@ func (h *Handlers) ListSubjects(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handlers) ListAllMaterials(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ListMaterials(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	materials, err := h.svc.ListAllMaterials(ctx)
+	materials, err := h.svc.ListMaterials(ctx)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrNotFound) {
 			http.Error(w, "Materials not found", http.StatusNotFound)

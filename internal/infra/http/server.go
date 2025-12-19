@@ -34,7 +34,7 @@ func New(port string, handlers *handlers.Handlers) *Server {
 	r.Get("/subjects", handlers.ListSubjects)
 
 	// Routes (Possibly public)
-	r.Get("/materials", handlers.ListAllMaterials)
+	r.Get("/materials", handlers.ListMaterials)
 	r.Get("/materials/{id}/versions", handlers.ListMaterialVersionsByMaterialID)
 	r.Put("/materials/{id}/versions/{version_id}/main", handlers.UpdateMaterialVersionMain)
 

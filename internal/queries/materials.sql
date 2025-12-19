@@ -1,4 +1,12 @@
--- name: ListAllMaterials :many
+-- name: ListMaterialsRaw :many
+SELECT id,
+	teacher_id,
+	subject_id,
+	original_material_id,
+	current_version_id,
+	created_at
+FROM materials;
+-- name: ListMaterials :many
 SELECT m.id,
 	t.name as teacher_name,
 	s.name as subject_name,
